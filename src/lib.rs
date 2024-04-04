@@ -79,7 +79,7 @@ mod trie_tree;
 #[cfg(feature = "smtc")]
 pub use ckb_smt::{SMTBuilder, SMT};
 pub use h256::H256;
-pub use merkle_proof::{CompiledMerkleProof, MerkleProof};
+pub use merkle_proof::MerkleProof;
 #[cfg(not(feature = "trie"))]
 pub use tree::SparseMerkleTree;
 pub use tree::{BranchKey, BranchNode};

@@ -1,8 +1,8 @@
 use std::fs;
 
 use crate::{
-    blake2b::Blake2bHasher, default_store::DefaultStore, CompiledMerkleProof, SparseMerkleTree,
-    H256,
+    blake2b::Blake2bHasher, default_store::DefaultStore, merkle_proof::CompiledMerkleProof,
+    SparseMerkleTree, H256,
 };
 use anyhow::Result;
 use rand::{prelude::SliceRandom, thread_rng, Rng};
