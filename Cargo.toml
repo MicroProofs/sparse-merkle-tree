@@ -27,6 +27,8 @@ trie = []
 [dependencies]
 cfg-if = "1"
 blake2b-rs = "0.2"
+hexlit = "0.5.5"
+hex = "0.4.3"
 
 [dev-dependencies]
 proptest = "0.9"
