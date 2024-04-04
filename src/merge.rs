@@ -125,15 +125,13 @@ pub fn merge<H: Hasher + Default>(
         return MergeValue::zero();
     }
     if lhs.is_zero() {
-        return merge_with_zero::<H>(height, node_key, rhs, true);
+        return rhs.clone();
     }
     if rhs.is_zero() {
-        return merge_with_zero::<H>(height, node_key, lhs, false);
+        return lhs.clone();
     }
+
     let mut hasher = H::default();
-    hasher.write_byte(MERGE_NORMAL);
-    hasher.write_byte(height);
-    hasher.write_h256(node_key);
     hasher.write_h256(&lhs.hash::<H>());
     hasher.write_h256(&rhs.hash::<H>());
     MergeValue::Value(hasher.finish())

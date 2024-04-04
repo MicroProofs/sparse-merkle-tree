@@ -7,18 +7,24 @@ use crate::{
 };
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+pub enum Side {
+    Left(MergeValue),
+    Right(MergeValue),
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct MerkleProof {
     // leaf bitmap, bitmap.get_bit(height) is true means there need a non zero sibling in this height
     leaves_bitmap: Vec<H256>,
     // needed sibling node hash
-    merkle_path: Vec<MergeValue>,
+    merkle_path: Vec<(H256, Vec<Side>)>,
 }
 
 impl MerkleProof {
     /// Create MerkleProof
     /// leaves_bitmap: leaf bitmap, bitmap.get_bit(height) is true means there need a non zero sibling in this height
     /// proof: needed sibling node hash
-    pub fn new(leaves_bitmap: Vec<H256>, merkle_path: Vec<MergeValue>) -> Self {
+    pub fn new(leaves_bitmap: Vec<H256>, merkle_path: Vec<(H256, Vec<Side>)>) -> Self {
         MerkleProof {
             leaves_bitmap,
             merkle_path,
@@ -26,7 +32,7 @@ impl MerkleProof {
     }
 
     /// Destruct the structure, useful for serialization
-    pub fn take(self) -> (Vec<H256>, Vec<MergeValue>) {
+    pub fn take(self) -> (Vec<H256>, Vec<(H256, Vec<Side>)>) {
         let MerkleProof {
             leaves_bitmap,
             merkle_path,
@@ -45,117 +51,12 @@ impl MerkleProof {
     }
 
     /// return sibling node hashes
-    pub fn merkle_path(&self) -> &Vec<MergeValue> {
+    pub fn merkle_path(&self) -> &Vec<(H256, Vec<Side>)> {
         &self.merkle_path
     }
 
     pub fn compile(self, mut leaves_keys: Vec<H256>) -> Result<CompiledMerkleProof> {
-        if leaves_keys.is_empty() {
-            return Err(Error::EmptyKeys);
-        } else if leaves_keys.len() != self.leaves_count() {
-            return Err(Error::IncorrectNumberOfLeaves {
-                expected: self.leaves_count(),
-                actual: leaves_keys.len(),
-            });
-        }
-        // sort leaves keys
-        leaves_keys.sort_unstable();
-
-        let (leaves_bitmap, merkle_path) = self.take();
-
-        let mut proof: Vec<u8> = Vec::with_capacity(merkle_path.len() * 33 + leaves_keys.len());
-        let mut stack_fork_height = [0u8; MAX_STACK_SIZE]; // store fork height
-        let mut stack_top = 0;
-        let mut leaf_index = 0;
-        let mut merkle_path_index = 0;
-        while leaf_index < leaves_keys.len() {
-            let leaf_key = leaves_keys[leaf_index];
-            let fork_height = if leaf_index + 1 < leaves_keys.len() {
-                leaf_key.fork_height(&leaves_keys[leaf_index + 1])
-            } else {
-                core::u8::MAX
-            };
-            proof.push(0x4C);
-            let mut zero_count = 0u16;
-            for height in 0..=fork_height {
-                if height == fork_height && leaf_index + 1 < leaves_keys.len() {
-                    // If it's not final round, we don't need to merge to root (height=255)
-                    break;
-                }
-                let (op_code_opt, sibling_data_opt): (_, Option<Vec<u8>>) =
-                    if stack_top > 0 && stack_fork_height[stack_top - 1] == height {
-                        stack_top -= 1;
-                        (Some(0x48), None)
-                    } else if leaves_bitmap[leaf_index].get_bit(height) {
-                        if merkle_path_index >= merkle_path.len() {
-                            return Err(Error::CorruptedProof);
-                        }
-                        let node = &merkle_path[merkle_path_index];
-                        merkle_path_index += 1;
-                        match node {
-                            MergeValue::Value(v) => (Some(0x50), Some(v.as_slice().to_vec())),
-                            MergeValue::MergeWithZero {
-                                base_node,
-                                zero_bits,
-                                zero_count,
-                            } => {
-                                let mut buffer = crate::vec![*zero_count];
-                                buffer.extend_from_slice(base_node.as_slice());
-                                buffer.extend_from_slice(zero_bits.as_slice());
-                                (Some(0x51), Some(buffer))
-                            }
-                            #[cfg(feature = "trie")]
-                            _ => unreachable!(),
-                        }
-                    } else {
-                        zero_count += 1;
-                        if zero_count > 256 {
-                            return Err(Error::CorruptedProof);
-                        }
-                        (None, None)
-                    };
-                if let Some(op_code) = op_code_opt {
-                    if zero_count > 0 {
-                        let n = if zero_count == 256 {
-                            0
-                        } else {
-                            zero_count as u8
-                        };
-                        proof.push(0x4F);
-                        proof.push(n);
-                        zero_count = 0;
-                    }
-                    proof.push(op_code);
-                }
-                if let Some(data) = sibling_data_opt {
-                    proof.extend(&data);
-                }
-            }
-            if zero_count > 0 {
-                let n = if zero_count == 256 {
-                    0
-                } else {
-                    zero_count as u8
-                };
-                proof.push(0x4F);
-                proof.push(n);
-            }
-            debug_assert!(stack_top < MAX_STACK_SIZE);
-            stack_fork_height[stack_top] = fork_height;
-            stack_top += 1;
-            leaf_index += 1;
-        }
-
-        if stack_top != 1 {
-            return Err(Error::CorruptedProof);
-        }
-        if leaf_index != leaves_keys.len() {
-            return Err(Error::CorruptedProof);
-        }
-        if merkle_path_index != merkle_path.len() {
-            return Err(Error::CorruptedProof);
-        }
-        Ok(CompiledMerkleProof(proof))
+        todo!()
     }
 
     /// Compute root from proof
