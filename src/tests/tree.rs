@@ -1,14 +1,7 @@
-use crate::merkle_proof::CompiledMerkleProof;
 use crate::*;
-use crate::{
-    blake2b::Blake2bHasher, default_store::DefaultStore, error::Error, merge::MergeValue,
-    MerkleProof,
-};
+use crate::{blake2b::Blake2bHasher, default_store::DefaultStore, error::Error, MerkleProof};
 
 use hexlit::hex;
-use proptest::prelude::*;
-use rand::prelude::{Rng, SliceRandom};
-use std::collections::HashMap;
 
 #[allow(clippy::upper_case_acronyms)]
 type SMT = SparseMerkleTree<Blake2bHasher, H256, DefaultStore<H256>>;
@@ -146,11 +139,10 @@ fn my_test() {
     bytes_list.sort_unstable();
 
     let mut tree = SMT::default();
-    for (i, bytea) in (&bytes_list).to_vec().iter().enumerate() {
-        dbg!("INDEX {}", i);
-        let key: H256 = { (*bytea).into() };
+    for bytea in bytes_list {
+        let key: H256 = { (bytea).into() };
 
-        let value: H256 = { (*bytea).into() };
+        let value: H256 = { (bytea).into() };
         tree.update(key, value).expect("update");
     }
 
